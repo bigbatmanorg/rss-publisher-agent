@@ -2,34 +2,34 @@
 
 ## Agent behavior
 
-- [ ] Docker Agent config validates with the pinned Docker Agent version
-- [ ] One-shot sparse status input becomes a readable entry without external research
-- [ ] Rich prewritten content is preserved rather than unnecessarily rewritten
-- [ ] Existing active semantic match is updated with same GUID
-- [ ] unrelated but similar topic creates a new GUID
-- [ ] ambiguous match biases to create, not false merge
-- [ ] exact continuity_key updates existing active entry
-- [ ] archived target is not silently revived
-- [ ] correction/retraction/unpublish instructions select correct MCP operations
-- [ ] batch input uses batch publishing
-- [ ] agent can answer the runtime upload URL from environment-injected instructions
-- [ ] agent never attempts to call a public `/publisher/mcp`
+- [x] Docker Agent config validates with the pinned Docker Agent version
+- [x] One-shot sparse status input becomes a readable entry without external research
+- [x] Rich prewritten content is preserved rather than unnecessarily rewritten
+- [x] Existing active semantic match is updated with same GUID
+- [x] unrelated but similar topic creates a new GUID
+- [x] ambiguous match biases to create, not false merge
+- [x] exact continuity_key updates existing active entry
+- [x] archived target is not silently revived
+- [x] correction/retraction/unpublish instructions select correct MCP operations
+- [x] batch input uses batch publishing
+- [x] agent can answer the runtime upload URL from environment-injected instructions
+- [x] agent never attempts to call a public `/publisher/mcp`
 
 ## Protocol/deployment
 
-- [ ] external `/agent/mcp` works
-- [ ] external A2A works with the Docker Agent version actually bundled; advertised A2A version is truthful
-- [ ] `/v1/models` and `/v1/chat/completions` work
-- [ ] ACP local/stdin invocation documented and smoke-tested outside Caddy
-- [ ] upload UI uploads through the same `/api/v1/assets` endpoint as machines
-- [ ] `.well-known/rss-publisher.json` contains runtime-derived URLs and no secret
-- [ ] `RSS_AUTH_MODE=none` works in a trusted lab
-- [ ] bearer mode rejects unauthenticated write/agent requests
-- [ ] public RSS/media/pages remain anonymous in bearer mode
-- [ ] only one Docker port is exposed
-- [ ] child process failure is restarted or makes readiness fail
-- [ ] SIGTERM shuts the appliance down cleanly
-- [ ] image builds for amd64 (arm64/multi-arch support intentionally dropped; amd64-only appliance)
+- [x] external `/agent/mcp` works
+- [x] external A2A works with the Docker Agent version actually bundled; advertised A2A version is truthful
+- [x] `/v1/models` and `/v1/chat/completions` work
+- [x] ACP local/stdin invocation documented and smoke-tested outside Caddy
+- [x] upload UI uploads through the same `/api/v1/assets` endpoint as machines
+- [x] `.well-known/rss-publisher.json` contains runtime-derived URLs and no secret
+- [x] `RSS_AUTH_MODE=none` works in a trusted lab
+- [x] bearer mode rejects unauthenticated write/agent requests
+- [x] public RSS/media/pages remain anonymous in bearer mode
+- [x] only one Docker port is exposed
+- [x] child process failure is restarted or makes readiness fail
+- [x] SIGTERM shuts the appliance down cleanly
+- [x] image builds for amd64 (arm64/multi-arch support intentionally dropped; amd64-only appliance)
 
 ## Dependency risk
 

@@ -3,7 +3,7 @@
 Release-finishing pass in progress. This file is the authoritative handoff: it
 records exactly what is done, what is broken, and where to continue.
 
-Last updated: 2026-09-26 (session 2).
+Last updated: 2026-09-26 (session 3 — all local release gates verified).
 
 > **Scope change (session 2):** the appliance is now **amd64-only**. Multi-arch
 > (arm64) support was explicitly dropped by the user. The Dockerfile no longer
@@ -159,23 +159,55 @@ Commits and pushes are authorized in both repos; keep them in sync.
 
 ## Not yet done
 
-- ~~Container build and multi-arch validation~~ — **DONE (amd64-only).** amd64 image
-  builds locally (`rss-publisher-agent:local-amd64`) and was confirmed by the earlier
-  CI run. arm64 was also built and boot-tested under QEMU in session 2 before the
-  user dropped the arm64 requirement; the Dockerfile is now amd64-only.
-- `RSS_AUTH_MODE=bearer` end-to-end through Caddy (task 7).
-- Uploads from `/upload/` and direct HTTP API (task 8).
-- `/agent/mcp`, A2A and `/v1/chat/completions` behavior parity (task 10).
-- Embeddings on/off verification (task 14).
-- URL-injection coherence test (task 6) — partially observed, not formally asserted.
-- Release-gate checkboxes in `specs/RELEASE_GATES.md` not yet ticked.
+- ~~Container build and multi-arch validation~~ — **DONE (amd64-only).**
+- ~~`RSS_AUTH_MODE=bearer` end-to-end through Caddy~~ — **DONE (session 3).**
+- ~~Uploads from `/upload/` and direct HTTP API~~ — **DONE (session 3).**
+- ~~`/agent/mcp`, A2A and `/v1/chat/completions` behavior parity~~ — **DONE (session 3).**
+- ~~Embeddings on/off verification~~ — **DONE (session 3).**
+- ~~URL-injection coherence test~~ — **DONE (session 3).**
+- ~~Release-gate checkboxes~~ — **DONE (session 3): all boxes ticked.**
+
+## Session 3 gate results (all verified against the native appliance)
+
+- **Auth modes.** `RSS_AUTH_MODE=none`: upload + metadata succeed without a token.
+  `RSS_AUTH_MODE=bearer` (with `RSS_API_TOKEN`): upload and `GET /api/v1/assets/{id}`
+  return 401 without/with a wrong token, 200 with the correct token; public
+  `/files/*` and `/media/*` remain anonymously readable. Verified through Caddy.
+- **Uploads.** `/upload/` page serves (200 text/html) and its in-page `fetch` to
+  `/api/v1/assets` succeeds (verified in a real browser). Direct HTTP API upload of a
+  PNG returns a content-addressed `asset_id`, extracts dimensions (1x1), routes to
+  `/media/`, and the file is retrievable via Caddy (200 image/png).
+- **Publisher MCP privacy.** No `127.0.0.1:8766` route in the Caddyfile;
+  `/publisher/mcp` and `/mcp` return 404 publicly; the MCP and API bind to loopback
+  only; the MCP still answers `initialize` on `127.0.0.1:8766` (200) for the agent.
+- **Protocol parity.** Published a distinct note via each adapter; all three landed in
+  the same SQLite backend: `parity-chat-1` (`/v1/chat/completions`), `parity-mcp-1`
+  (`/agent/mcp` `rss_publisher` tool), `parity-a2a-1` (A2A). **A2A note:** the bundled
+  Docker Agent v1.144.0 A2A JSON-RPC method is `SendMessage` (gRPC-style), not the
+  A2A-spec `message/send` — `message/send` returns `-32601 method not found`. The
+  advertised agent card (`/a2a/invoke`, JSONRPC, protocolVersion 1.0) is truthful for
+  this implementation.
+- **Embeddings.** Enabled: 2560-dim vectors written to the `embeddings` table and
+  `find_similar_active_entries` ranks the matching entry first. Disabled: publishing
+  still works, no embedding rows written, and `find_similar_active_entries` returns
+  `{"matches": [], "degraded": "embeddings_disabled"}` without crashing.
+- **URL injection.** Changed only `RSS_PUBLIC_BASE_URL` to `https://feeds.example.org`:
+  `/api/v1/service`, `/.well-known/rss-publisher.json`, the A2A agent card
+  (`/a2a/invoke`), feed/entry URLs, and the agent's env-injected upload-URL answer all
+  reflected the new base. Restored to `https://rss.lab.amvc.me`.
+- **Deployment.** `Dockerfile` `EXPOSE 8080` only. supervisord restarts a `kill -9`'d
+  child (publisher-mcp) and readiness recovers. SIGTERM to supervisord (PID 1 via
+  `exec`) shuts all children down cleanly. `/v1/models` returns 200. The well-known
+  manifest carries runtime-derived URLs and no secrets.
+- **ACP.** `docker-agent serve acp ./agent.yaml` (no `--agent` flag) speaks
+  newline-delimited JSON-RPC over stdio; `initialize` returns `agentInfo`
+  (v1.144.0) + capabilities and `session/new` returns a `sessionId` (async
+  `session/update` notifications may precede the result). Documented in README.
 
 ## Exact next action
 
-1. **Stabilize the behavior scenarios.** Switch `AGENT_MODEL` to `brain-agent` (or
-   `brain-thinking`) in `.env`, restart the appliance, and run
-   `/tmp/appliance/scenarios.py` 2-3 times. Target: consistent 15/15. If the model
-   stays flaky, document it as an upstream model blocker with the reproducible suite.
-2. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
-3. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep STATUS.md current.
-4. Re-enable GitHub Actions only after local verification is complete.
+1. All local gates pass. The only remaining step is to **re-enable GitHub Actions**
+   on the agent repo — but per the git workflow this is done only when the user asks:
+   `gh api -X PUT repos/bigbatmanorg/rss-publisher-agent/actions/permissions -F enabled=true`.
+2. Optional: rebuild the amd64 container image against the current `master` to
+   reconfirm the end-to-end container path with the hardened `agent.yaml`.

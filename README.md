@@ -69,6 +69,32 @@ The response returns an `asset_id`. Give that ID to the publishing agent with th
 
 There is deliberately **no** public `/publisher/mcp` route.
 
+## ACP (local/stdin)
+
+In addition to the networked adapters above, the same agent can be invoked over the
+Agent Client Protocol (ACP) on stdin/stdout, outside Caddy, with the bundled Docker
+Agent:
+
+```bash
+docker-agent serve acp ./agent.yaml
+```
+
+ACP speaks newline-delimited JSON-RPC over stdio. A minimal handshake:
+
+```jsonc
+// -> initialize
+{"jsonrpc":"2.0","id":0,"method":"initialize","params":{"protocolVersion":1,"clientCapabilities":{}}}
+// <- result includes agentInfo (name/version) and agentCapabilities
+// -> session/new
+{"jsonrpc":"2.0","id":1,"method":"session/new","params":{"cwd":".","mcpServers":[]}}
+// <- result includes sessionId (async session/update notifications may arrive first)
+// -> session/prompt
+{"jsonrpc":"2.0","id":2,"method":"session/prompt","params":{"sessionId":"<id>","prompt":[{"type":"text","text":"Publish this note: ..."}]}}
+```
+
+Keep stdin open for the lifetime of the session; closing stdin stops the agent. ACP is
+a local invocation path and is not routed through Caddy.
+
 ## Authentication
 
 Lab:
