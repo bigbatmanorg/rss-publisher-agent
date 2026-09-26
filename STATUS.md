@@ -108,7 +108,10 @@ switch `AGENT_MODEL` to a stronger tool-calling model, or add a deterministic pr
 
 - ~~The MCP repo is private.~~ **RESOLVED.** `bigbatmanorg/rss-publisher-mcp` is now
   public and anonymously clonable, so the Dockerfile's `git+https` install works. The
-  container build is no longer blocked by access (still needs to be run).
+  container build is no longer blocked by access (still needs to be run). Verified the
+  exact Dockerfile install command succeeds and the tagged package contains the fix:
+  `uv pip install "rss-publisher-mcp @ git+https://github.com/bigbatmanorg/rss-publisher-mcp.git@v0.1.0"`
+  -> `installed 0.1.0 EntryPatch ok`.
 - ~~The `v0.1.0` tag does not contain the schema fix.~~ **RESOLVED.** The MCP schema fix
   was committed (`e20432a`), pushed to `main`, and the `v0.1.0` tag was moved to that
   commit and force-pushed. Verified: `git show v0.1.0:src/rss_publisher/models.py`
