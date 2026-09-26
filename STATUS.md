@@ -106,29 +106,44 @@ switch `AGENT_MODEL` to a stronger tool-calling model, or add a deterministic pr
 
 ## Blockers
 
-- **The MCP repo is private.** `https://github.com/bigbatmanorg/rss-publisher-mcp` is
-  private, so the Dockerfile's anonymous
-  `uv pip install "rss-publisher-mcp @ git+https://github.com/...@v0.1.0"` cannot clone
-  it inside a build. The container build is therefore **not yet verified**. Needs either
-  a build secret / `--secret` git token, a vendored wheel, or making the repo public.
+- ~~The MCP repo is private.~~ **RESOLVED.** `bigbatmanorg/rss-publisher-mcp` is now
+  public and anonymously clonable, so the Dockerfile's `git+https` install works. The
+  container build is no longer blocked by access (still needs to be run).
 - ~~The `v0.1.0` tag does not contain the schema fix.~~ **RESOLVED.** The MCP schema fix
   was committed (`e20432a`), pushed to `main`, and the `v0.1.0` tag was moved to that
   commit and force-pushed. Verified: `git show v0.1.0:src/rss_publisher/models.py`
   contains `EntryPatch` and `mcp_server.py` contains `_payload`; MCP `pytest` passes
   (152 passed, 1 skipped).
+- **Agent repo has no GitHub remote.** Git is initialized locally (branch `master`,
+  commit `34f35df` "init", which already includes this session's fixes).
+  `bigbatmanorg/rss-publisher-agent` does not exist on GitHub yet. Create it, add it as
+  `origin`, and push (prefer branch `main`).
+
+## Git workflow (authorized)
+
+Commits and pushes are authorized in both repos; keep them in sync.
+
+- MCP repo: `origin` = `https://github.com/bigbatmanorg/rss-publisher-mcp.git`, branch
+  `main`. Commit, push, and move/cut the release tag when a change affects the appliance,
+  then bump `RSS_PUBLISHER_MCP_REF` in the agent repo.
+- Agent repo: local only until the GitHub repo is created; then add `origin` and push.
+- Any MCP change the appliance depends on must be committed, pushed, tagged, and
+  reflected in `RSS_PUBLISHER_MCP_REF` in the same session.
 
 ## Not yet done
 
-- Container build (blocked above) and multi-arch validation (task 12).
+- Create the agent GitHub repo + remote, then push.
+- Container build and multi-arch validation (task 12) — access blocker is gone.
 - `RSS_AUTH_MODE=bearer` end-to-end through Caddy (task 7).
 - Uploads from `/upload/` and direct HTTP API (task 8).
 - `/agent/mcp`, A2A and `/v1/chat/completions` behavior parity (task 10).
 - Embeddings on/off verification (task 14).
 - URL-injection coherence test (task 6) — partially observed, not formally asserted.
-- `STATUS.md`/release-gate checkboxes in `specs/RELEASE_GATES.md` not yet ticked.
+- Release-gate checkboxes in `specs/RELEASE_GATES.md` not yet ticked.
 
 ## Exact next action
 
-1. Decide the private-repo build strategy, then run `docker build` for amd64 and arm64.
-2. Fix the 5 failing behavior scenarios (start with the fabricated-Nobel entry).
-3. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
+1. Create `bigbatmanorg/rss-publisher-agent`, add `origin`, push (branch `main`).
+2. Run `docker build` for amd64 and arm64 (access blocker resolved).
+3. Fix the 5 failing behavior scenarios (start with the fabricated-Nobel entry).
+4. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.

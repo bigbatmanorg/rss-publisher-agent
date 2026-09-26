@@ -11,8 +11,27 @@ one-container packaging.
 
 Use `specs/ARCHITECTURE.md` and `specs/RELEASE_GATES.md` as normative.
 The MCP repo is published at `https://github.com/bigbatmanorg/rss-publisher-mcp`
-(**private**) and the dev copy is at
+(**public**) and the dev copy is at
 `/home/toor/projects/rss-publisher-mcp-v0.1.0/rss-publisher-mcp/`.
+
+## Git workflow (you are authorized)
+
+You may and should commit and push in both repos as you work. Keep them in sync.
+
+- **MCP repo** (`/home/toor/projects/rss-publisher-mcp-v0.1.0/rss-publisher-mcp`):
+  remote `origin` = `https://github.com/bigbatmanorg/rss-publisher-mcp.git`, branch
+  `main`. Commit fixes, push to `main`, and when a change affects the agent appliance,
+  move/cut the release tag (currently `v0.1.0`) and push it, then bump
+  `RSS_PUBLISHER_MCP_REF` in the agent repo to match.
+- **Agent repo** (`/home/toor/projects/rss-publisher-agent-v0.1.0/rss-publisher-agent`):
+  git is initialized locally (branch `master`, commit `34f35df` "init"). There is
+  **no remote yet** and `bigbatmanorg/rss-publisher-agent` does not exist on GitHub.
+  Create the GitHub repo, add it as `origin`, and push. Prefer renaming the branch to
+  `main` to match the MCP repo and the CI workflow.
+- **Sync rule:** any MCP change that the appliance depends on must be committed, pushed,
+  tagged, and reflected in the agent repo's `RSS_PUBLISHER_MCP_REF` in the same session.
+  Never leave the agent pinned to a ref that does not contain the fix it needs.
+- Keep `STATUS.md` in both repos updated as you go (tests, failures, blockers, next action).
 
 ## State at handoff
 
@@ -34,12 +53,14 @@ The MCP repo is published at `https://github.com/bigbatmanorg/rss-publisher-mcp`
 
 ### Immediate blockers (resolve first)
 
-1. **MCP repo is private** -> the Dockerfile's anonymous `git+https` clone fails, so the
-   container build is unverified. Choose a strategy: build secret/`--secret` git token,
-   vendored wheel, or make the repo public.
+1. ~~MCP repo is private.~~ **RESOLVED.** The repo is now public and anonymously
+   clonable (`git clone --branch v0.1.0 https://github.com/bigbatmanorg/rss-publisher-mcp.git`
+   succeeds without credentials), so the Dockerfile's `git+https` install works.
 2. ~~The `v0.1.0` tag predates the schema fix.~~ **RESOLVED.** The MCP schema fix was
    committed (`e20432a`), pushed to `main`, and `v0.1.0` was moved to that commit and
    force-pushed. Verified the tag contains `EntryPatch`/`_payload`; MCP `pytest` passes.
+3. **Agent repo has no GitHub remote.** Create `bigbatmanorg/rss-publisher-agent`, add
+   it as `origin`, and push (see Git workflow above).
 
 ### Failing behavior gates (5 of 14 scenarios)
 
@@ -52,19 +73,19 @@ deterministic pre-check.
 
 ## Remaining tasks
 
-1. Resolve the private-repo build path; build the container for amd64 and arm64
-   (or at minimum validate both download/build paths).
-2. Fix the 5 failing behavior scenarios; re-run `/tmp/appliance/scenarios.py`.
-3. `RSS_AUTH_MODE=none` and `bearer` end-to-end through Caddy.
-4. Uploads from both `/upload/` and the direct HTTP API.
-5. Confirm the deterministic Publisher MCP stays private and is not routed publicly.
-6. `/agent/mcp`, A2A and `/v1/chat/completions` all drive the same agent behavior.
-7. Treat Docker Agent A2A as evolving: advertise/test only what v1.144.0 implements.
-8. Embeddings enabled (verify vectors generated and used for active-entry matching)
+1. Create the agent GitHub repo, add `origin`, push (rename branch to `main`).
+2. Build the container for amd64 and arm64 (the private-repo blocker is gone).
+3. Fix the 5 failing behavior scenarios; re-run `/tmp/appliance/scenarios.py`.
+4. `RSS_AUTH_MODE=none` and `bearer` end-to-end through Caddy.
+5. Uploads from both `/upload/` and the direct HTTP API.
+6. Confirm the deterministic Publisher MCP stays private and is not routed publicly.
+7. `/agent/mcp`, A2A and `/v1/chat/completions` all drive the same agent behavior.
+8. Treat Docker Agent A2A as evolving: advertise/test only what v1.144.0 implements.
+9. Embeddings enabled (verify vectors generated and used for active-entry matching)
    and disabled (verify correct degraded behavior).
-9. Verify `.env` URL injection: changing only `RSS_PUBLIC_BASE_URL` updates agent
-   instructions, discovery, feed URLs and asset URLs coherently.
-10. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep `STATUS.md` current.
+10. Verify `.env` URL injection: changing only `RSS_PUBLIC_BASE_URL` updates agent
+    instructions, discovery, feed URLs and asset URLs coherently.
+11. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep `STATUS.md` current.
 
 Do not declare release-ready until every required gate is either passed or explicitly
 documented as an upstream blocker with a reproducible test.
