@@ -29,7 +29,7 @@
 - [ ] only one Docker port is exposed
 - [ ] child process failure is restarted or makes readiness fail
 - [ ] SIGTERM shuts the appliance down cleanly
-- [ ] image builds for amd64 and arm64
+- [ ] image builds for amd64 (arm64/multi-arch support intentionally dropped; amd64-only appliance)
 
 ## Dependency risk
 

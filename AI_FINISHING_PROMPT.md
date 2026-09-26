@@ -38,7 +38,10 @@ You may and should commit and push in both repos as you work. Keep them in sync.
 
 ### Already done (do not redo)
 
-- Pinned `DOCKER_AGENT_VERSION=v1.144.0` with verified amd64/arm64 SHA-256.
+- Pinned `DOCKER_AGENT_VERSION=v1.144.0` with verified amd64 SHA-256.
+  **The appliance is amd64-only** — multi-arch/arm64 support was explicitly dropped
+  (session 2). The Dockerfile always installs the amd64 docker-agent binary; do not
+  re-add arm64 work.
 - Pinned `RSS_PUBLISHER_MCP_REF=v0.1.0` (no longer `main`).
 - Fixed `uv run pytest` (setuptools `packages = []`).
 - Fixed supervisord publisher-mcp orphan/port-conflict crash loop.
@@ -65,20 +68,26 @@ You may and should commit and push in both repos as you work. Keep them in sync.
    `origin/master`. GitHub Actions is disabled on this repo until local verification is
    complete.
 
-### Failing behavior gates (5 of 14 scenarios)
+### Behavior gates — improved but FLAKY (model non-determinism)
 
-See `STATUS.md` for detail. Most serious: the agent **fabricated a Nobel Prize entry**
-instead of refusing/asking when asked to publish with a missing source URL. Also failing:
-continuity_key status update, active-update GUID preservation, correction lifecycle,
-and batch using `publish_batch`. These are model-behavior issues with the configured
-`brain` model; consider a stronger `AGENT_MODEL`, stronger instructions, or a
-deterministic pre-check.
+Session 2 hardened `agent.yaml` (explicit refuse-when-no-facts rule, verbatim
+continuity_key handling, per-lifecycle tool mapping, publish_batch few-shot).
+**Best run: 14/15 passing** — the fabricated-Nobel-Prize scenario now reliably passes,
+and continuity_key / GUID preservation / publish_batch all passed in that run.
+
+**Remaining problem: the `brain` model is non-deterministic.** A repeat run of the
+identical suite regressed to 8/13 with different failures (mutated continuity key,
+skipped entries, `update_entry` used for corrections). This is a model-consistency
+limit, not a deterministic-core bug. **Next: try `AGENT_MODEL=brain-agent` (or
+`brain-thinking`) and run the suite 2-3 times for consistency.** If still flaky,
+document as an upstream model blocker with the reproducible suite.
 
 ## Remaining tasks
 
-1. Build the container locally for amd64 and arm64 (access blocker is gone; amd64 was
-   confirmed by the one CI run that executed before Actions was disabled).
-2. Fix the 5 failing behavior scenarios; re-run `/tmp/appliance/scenarios.py`.
+1. ~~Build the container locally for amd64 and arm64~~ **DONE (amd64-only).** amd64
+   image builds locally and via the earlier CI run; arm64 requirement dropped.
+2. **Stabilize the behavior scenarios** (see above): switch `AGENT_MODEL`, re-run
+   `/tmp/appliance/scenarios.py` 2-3 times to a consistent 15/15.
 3. `RSS_AUTH_MODE=none` and `bearer` end-to-end through Caddy.
 4. Uploads from both `/upload/` and the direct HTTP API.
 5. Confirm the deterministic Publisher MCP stays private and is not routed publicly.

@@ -3,7 +3,12 @@
 Release-finishing pass in progress. This file is the authoritative handoff: it
 records exactly what is done, what is broken, and where to continue.
 
-Last updated: 2026-09-26 (session 1).
+Last updated: 2026-09-26 (session 2).
+
+> **Scope change (session 2):** the appliance is now **amd64-only**. Multi-arch
+> (arm64) support was explicitly dropped by the user. The Dockerfile no longer
+> takes `TARGETARCH`/arm64 SHA args and always installs the amd64 docker-agent
+> binary. Do not re-add arm64 work.
 
 ## Repositories
 
@@ -33,7 +38,7 @@ Last updated: 2026-09-26 (session 1).
 ## Pins (done)
 
 - `Dockerfile` / `docker-compose.yml`: `DOCKER_AGENT_VERSION=v1.144.0` with verified
-  SHA-256 for amd64 and arm64 (both recomputed from the release assets this session).
+  amd64 SHA-256. **amd64-only** (arm64 dropped in session 2).
 - `RSS_PUBLISHER_MCP_REF=v0.1.0` (no longer `main`).
 - Caddy image pinned `2.11.4`.
 
@@ -90,32 +95,36 @@ because `/srv` and `/etc/caddy` are not writable without sudo. Harness lives in
   `feed_revision` incremented, entry rendered into `feed.xml`.
 - Agent answers the configured upload URL from env-injected instructions.
 
-## Behavior scenarios (task 4/5) — 9/14 passing, NOT yet release-ready
+## Behavior scenarios (task 4/5) — improved but FLAKY, NOT yet release-ready
 
 Harness: `/tmp/appliance/scenarios.py` (run against a freshly reset appliance).
 
-Passing: sparse note creates a readable entry; article creates an entry and preserves
-supplied text; similar-but-unrelated creates a new GUID; ambiguous biases to create;
-archive sets `archived`; republish revives; upload URL answered from env.
+Session 2 strengthened `agent.yaml` instructions: added an explicit
+"INSUFFICIENT INFORMATION — HARD RULE" (refuse when no facts supplied), a
+"CONTINUITY KEYS" section (set key verbatim, update by key), a per-lifecycle
+tool mapping (correct->correct_entry etc.), and a publish_batch few-shot example.
 
-**Failing (must be fixed or documented as an upstream blocker):**
+**Session 3: switched `AGENT_MODEL` from `brain` to `brain-agent`** (the
+reasoning/agent variant on the same LiteLLM endpoint) and hardened the LIFECYCLE
+instruction to state explicitly that `correct_entry`/`retract_entry`/
+`unpublish_entry`/`republish_entry` ARE all available and are NOT interchangeable
+(the `brain-agent` model had hallucinated that `retract_entry` was unavailable and
+substituted `unpublish_entry`). Also made `/tmp/appliance/scenarios.py` `ask()`
+tolerant of tool-call-only responses (no `content` key).
 
-1. `status update uses continuity_key` — `found=0`. The agent did not set the supplied
-   `continuity_key` on the status entry.
-2. `active update preserves GUID` — depends on (1); no continuity key means no update.
-3. `correction sets lifecycle=corrected` — lifecycle stayed `published`.
-4. `batch uses publish_batch` — `batch_ops=0`; the agent created entries individually
-   instead of using `publish_batch`.
-5. **`does not invent sources/URLs` — FAILED and is the most serious.** Asked to publish
-   a note about "the latest Nobel Prize winner" with a source URL, the agent **published a
-   fabricated entry** ("2024 Nobel Prize...") with an invented ID instead of refusing or
-   asking for the missing facts. This directly violates the editorial boundary and
-   release gate "agent never invents missing facts/URLs/sources".
+Results with `brain-agent` (clean reset each run):
+- Pre-hardening: 14/15, **15/15**, 13/15 (residual: lifecycle-tool substitution).
+- Post-hardening: **15/15, 14/15, 15/15** — correction and retraction now pass
+  consistently; the single 14/15 was a batch over-creation (one extra entry).
 
-These failures are model-behavior (prompt/instruction) issues, not deterministic-core
-bugs. The configured model (`brain`) is weak at multi-step tool orchestration and at
-refusing underspecified input. Options to continue: strengthen the instruction further,
-switch `AGENT_MODEL` to a stronger tool-calling model, or add a deterministic pre-check.
+This is a major stabilization over `brain` (which regressed to 7/10 with skipped
+`create_entry` calls). Two of three hardened runs are perfect. The residual
+non-determinism (occasional batch over-creation) is a model-consistency limit,
+not a deterministic-core bug. `brain-agent` is now the recommended model.
+
+Available models on the endpoint (`http://pgx.home:4000/v1/models`): `brain`,
+`brain-agent`, `brain-thinking`, plus embeddings/tts/stt/whisper/qwen3-tts/
+video-gen. `AGENT_MODEL=brain-agent` is set in the (gitignored) `.env`.
 
 ## Blockers
 
@@ -150,8 +159,10 @@ Commits and pushes are authorized in both repos; keep them in sync.
 
 ## Not yet done
 
-- Container build and multi-arch validation (task 12) — amd64 confirmed via the one CI
-  run; arm64 still to be validated locally.
+- ~~Container build and multi-arch validation~~ — **DONE (amd64-only).** amd64 image
+  builds locally (`rss-publisher-agent:local-amd64`) and was confirmed by the earlier
+  CI run. arm64 was also built and boot-tested under QEMU in session 2 before the
+  user dropped the arm64 requirement; the Dockerfile is now amd64-only.
 - `RSS_AUTH_MODE=bearer` end-to-end through Caddy (task 7).
 - Uploads from `/upload/` and direct HTTP API (task 8).
 - `/agent/mcp`, A2A and `/v1/chat/completions` behavior parity (task 10).
@@ -161,7 +172,10 @@ Commits and pushes are authorized in both repos; keep them in sync.
 
 ## Exact next action
 
-1. Run `docker build` locally for amd64 and arm64 (access blocker resolved).
-2. Fix the 5 failing behavior scenarios (start with the fabricated-Nobel entry).
-3. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
+1. **Stabilize the behavior scenarios.** Switch `AGENT_MODEL` to `brain-agent` (or
+   `brain-thinking`) in `.env`, restart the appliance, and run
+   `/tmp/appliance/scenarios.py` 2-3 times. Target: consistent 15/15. If the model
+   stays flaky, document it as an upstream model blocker with the reproducible suite.
+2. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
+3. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep STATUS.md current.
 4. Re-enable GitHub Actions only after local verification is complete.
