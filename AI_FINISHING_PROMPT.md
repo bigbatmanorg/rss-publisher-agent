@@ -24,10 +24,11 @@ You may and should commit and push in both repos as you work. Keep them in sync.
   move/cut the release tag (currently `v0.1.0`) and push it, then bump
   `RSS_PUBLISHER_MCP_REF` in the agent repo to match.
 - **Agent repo** (`/home/toor/projects/rss-publisher-agent-v0.1.0/rss-publisher-agent`):
-  git is initialized locally (branch `master`, commit `34f35df` "init"). There is
-  **no remote yet** and `bigbatmanorg/rss-publisher-agent` does not exist on GitHub.
-  Create the GitHub repo, add it as `origin`, and push. Prefer renaming the branch to
-  `main` to match the MCP repo and the CI workflow.
+  published at `https://github.com/bigbatmanorg/rss-publisher-agent` (public), remote
+  `origin` configured, branch `master`, local and remote in sync. Commit and push freely.
+  **GitHub Actions is DISABLED** on this repo until everything works locally — do not
+  re-enable it as part of routine work. Re-enable only when the user asks:
+  `gh api -X PUT repos/bigbatmanorg/rss-publisher-agent/actions/permissions -F enabled=true`.
 - **Sync rule:** any MCP change that the appliance depends on must be committed, pushed,
   tagged, and reflected in the agent repo's `RSS_PUBLISHER_MCP_REF` in the same session.
   Never leave the agent pinned to a ref that does not contain the fix it needs.
@@ -59,8 +60,10 @@ You may and should commit and push in both repos as you work. Keep them in sync.
 2. ~~The `v0.1.0` tag predates the schema fix.~~ **RESOLVED.** The MCP schema fix was
    committed (`e20432a`), pushed to `main`, and `v0.1.0` was moved to that commit and
    force-pushed. Verified the tag contains `EntryPatch`/`_payload`; MCP `pytest` passes.
-3. **Agent repo has no GitHub remote.** Create `bigbatmanorg/rss-publisher-agent`, add
-   it as `origin`, and push (see Git workflow above).
+3. ~~Agent repo has no GitHub remote.~~ **RESOLVED.** `bigbatmanorg/rss-publisher-agent`
+   is published (public), `origin` is configured, and local `master` is in sync with
+   `origin/master`. GitHub Actions is disabled on this repo until local verification is
+   complete.
 
 ### Failing behavior gates (5 of 14 scenarios)
 
@@ -73,19 +76,20 @@ deterministic pre-check.
 
 ## Remaining tasks
 
-1. Create the agent GitHub repo, add `origin`, push (rename branch to `main`).
-2. Build the container for amd64 and arm64 (the private-repo blocker is gone).
-3. Fix the 5 failing behavior scenarios; re-run `/tmp/appliance/scenarios.py`.
-4. `RSS_AUTH_MODE=none` and `bearer` end-to-end through Caddy.
-5. Uploads from both `/upload/` and the direct HTTP API.
-6. Confirm the deterministic Publisher MCP stays private and is not routed publicly.
-7. `/agent/mcp`, A2A and `/v1/chat/completions` all drive the same agent behavior.
-8. Treat Docker Agent A2A as evolving: advertise/test only what v1.144.0 implements.
-9. Embeddings enabled (verify vectors generated and used for active-entry matching)
+1. Build the container locally for amd64 and arm64 (access blocker is gone; amd64 was
+   confirmed by the one CI run that executed before Actions was disabled).
+2. Fix the 5 failing behavior scenarios; re-run `/tmp/appliance/scenarios.py`.
+3. `RSS_AUTH_MODE=none` and `bearer` end-to-end through Caddy.
+4. Uploads from both `/upload/` and the direct HTTP API.
+5. Confirm the deterministic Publisher MCP stays private and is not routed publicly.
+6. `/agent/mcp`, A2A and `/v1/chat/completions` all drive the same agent behavior.
+7. Treat Docker Agent A2A as evolving: advertise/test only what v1.144.0 implements.
+8. Embeddings enabled (verify vectors generated and used for active-entry matching)
    and disabled (verify correct degraded behavior).
-10. Verify `.env` URL injection: changing only `RSS_PUBLIC_BASE_URL` updates agent
-    instructions, discovery, feed URLs and asset URLs coherently.
-11. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep `STATUS.md` current.
+9. Verify `.env` URL injection: changing only `RSS_PUBLIC_BASE_URL` updates agent
+   instructions, discovery, feed URLs and asset URLs coherently.
+10. Tick the checkboxes in `specs/RELEASE_GATES.md` and keep `STATUS.md` current.
+11. Re-enable GitHub Actions on the agent repo only after local verification is complete.
 
 Do not declare release-ready until every required gate is either passed or explicitly
 documented as an upstream blocker with a reproducible test.

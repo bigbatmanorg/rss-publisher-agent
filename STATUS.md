@@ -5,6 +5,19 @@ records exactly what is done, what is broken, and where to continue.
 
 Last updated: 2026-09-26 (session 1).
 
+## Repositories
+
+- **MCP**: `https://github.com/bigbatmanorg/rss-publisher-mcp` — public, branch `main`,
+  tag `v0.1.0` (contains the typed-schema fix). CI enabled and passing.
+- **Agent**: `https://github.com/bigbatmanorg/rss-publisher-agent` — public, branch
+  `master`, `origin` configured, local and remote in sync at `a8d947e`.
+  **GitHub Actions is DISABLED** for this repo (`actions/permissions` `enabled=false`)
+  until everything works locally. Re-enable with:
+  `gh api -X PUT repos/bigbatmanorg/rss-publisher-agent/actions/permissions -F enabled=true`.
+- The one CI run that did execute (before disabling) passed in 37s, including the
+  `linux/amd64` docker build against the public MCP repo — so the container build path
+  is confirmed working on amd64.
+
 ## Environment (verified this session)
 
 - Docker 29.8.1
@@ -117,10 +130,9 @@ switch `AGENT_MODEL` to a stronger tool-calling model, or add a deterministic pr
   commit and force-pushed. Verified: `git show v0.1.0:src/rss_publisher/models.py`
   contains `EntryPatch` and `mcp_server.py` contains `_payload`; MCP `pytest` passes
   (152 passed, 1 skipped).
-- **Agent repo has no GitHub remote.** Git is initialized locally (branch `master`,
-  commit `34f35df` "init", which already includes this session's fixes).
-  `bigbatmanorg/rss-publisher-agent` does not exist on GitHub yet. Create it, add it as
-  `origin`, and push (prefer branch `main`).
+- ~~Agent repo has no GitHub remote.~~ **RESOLVED.** `bigbatmanorg/rss-publisher-agent`
+  is published (public), `origin` is configured, and local `master` is in sync with
+  `origin/master` at `a8d947e`. GitHub Actions is disabled (see Git workflow).
 
 ## Git workflow (authorized)
 
@@ -129,14 +141,17 @@ Commits and pushes are authorized in both repos; keep them in sync.
 - MCP repo: `origin` = `https://github.com/bigbatmanorg/rss-publisher-mcp.git`, branch
   `main`. Commit, push, and move/cut the release tag when a change affects the appliance,
   then bump `RSS_PUBLISHER_MCP_REF` in the agent repo.
-- Agent repo: local only until the GitHub repo is created; then add `origin` and push.
+- Agent repo: `origin` = `https://github.com/bigbatmanorg/rss-publisher-agent.git`,
+  branch `master`. Commit and push freely.
+- **GitHub Actions is disabled on the agent repo** until local verification is complete.
+  Do not re-enable it as part of routine work; the user will decide when.
 - Any MCP change the appliance depends on must be committed, pushed, tagged, and
   reflected in `RSS_PUBLISHER_MCP_REF` in the same session.
 
 ## Not yet done
 
-- Create the agent GitHub repo + remote, then push.
-- Container build and multi-arch validation (task 12) — access blocker is gone.
+- Container build and multi-arch validation (task 12) — amd64 confirmed via the one CI
+  run; arm64 still to be validated locally.
 - `RSS_AUTH_MODE=bearer` end-to-end through Caddy (task 7).
 - Uploads from `/upload/` and direct HTTP API (task 8).
 - `/agent/mcp`, A2A and `/v1/chat/completions` behavior parity (task 10).
@@ -146,7 +161,7 @@ Commits and pushes are authorized in both repos; keep them in sync.
 
 ## Exact next action
 
-1. Create `bigbatmanorg/rss-publisher-agent`, add `origin`, push (branch `main`).
-2. Run `docker build` for amd64 and arm64 (access blocker resolved).
-3. Fix the 5 failing behavior scenarios (start with the fabricated-Nobel entry).
-4. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
+1. Run `docker build` locally for amd64 and arm64 (access blocker resolved).
+2. Fix the 5 failing behavior scenarios (start with the fabricated-Nobel entry).
+3. Then run the remaining gates: bearer mode, uploads, protocol parity, embeddings on/off.
+4. Re-enable GitHub Actions only after local verification is complete.
