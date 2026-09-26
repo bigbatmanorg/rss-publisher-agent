@@ -1,0 +1,27 @@
+<!doctype html>
+<html lang="en">
+<head>
+<meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1">
+<title>RSS Publisher — Upload</title>
+<style>
+body{max-width:820px;margin:3rem auto;padding:0 1rem;font:16px/1.5 system-ui,sans-serif}#drop{border:2px dashed #888;border-radius:12px;padding:3rem;text-align:center}.row{margin:1rem 0}.result{border:1px solid #8884;border-radius:10px;padding:1rem;margin:1rem 0}input[type=password]{width:100%;padding:.6rem}button{padding:.6rem 1rem;cursor:pointer}code{word-break:break-all}img{max-width:240px;max-height:180px}
+</style>
+</head>
+<body>
+<h1>RSS Publisher Upload</h1>
+<p>Upload images, video, audio, PDFs or other safe files. The returned <code>asset_id</code> can be given to the RSS Publisher Agent.</p>
+<div class="row"><label>Bearer token (leave empty when authentication is disabled)<br><input id="token" type="password" autocomplete="off"></label></div>
+<div id="drop"><p>Drop files here or choose files.</p><input id="files" type="file" multiple></div>
+<div class="row"><button id="upload">Upload</button> <span id="status"></span></div>
+<div id="results"></div>
+<script>
+const token=document.querySelector('#token'); token.value=sessionStorage.getItem('rssToken')||''; token.onchange=()=>sessionStorage.setItem('rssToken',token.value);
+const input=document.querySelector('#files'), drop=document.querySelector('#drop');
+['dragenter','dragover'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.style.opacity='.7'}));
+['dragleave','drop'].forEach(e=>drop.addEventListener(e,x=>{x.preventDefault();drop.style.opacity='1'}));
+drop.addEventListener('drop',e=>{input.files=e.dataTransfer.files});
+async function upload(file){const fd=new FormData();fd.append('file',file);const h={};if(token.value)h.Authorization='Bearer '+token.value;const r=await fetch('/api/v1/assets',{method:'POST',headers:h,body:fd});if(!r.ok)throw new Error(await r.text());return r.json()}
+function card(x){const d=document.createElement('div');d.className='result';const preview=x.mime_type?.startsWith('image/')?`<p><img src="${x.public_url}" alt=""></p>`:'';d.innerHTML=`${preview}<strong>${x.original_filename||'asset'}</strong><p>Asset ID:<br><code>${x.id||x.asset_id}</code></p><p>Public URL:<br><code>${x.public_url}</code></p><button data-copy="${x.id||x.asset_id}">Copy asset ID</button> <button data-copy="${x.public_url}">Copy URL</button>`;d.querySelectorAll('button').forEach(b=>b.onclick=()=>navigator.clipboard.writeText(b.dataset.copy));return d}
+document.querySelector('#upload').onclick=async()=>{const status=document.querySelector('#status');const results=document.querySelector('#results');status.textContent='Uploading…';for(const f of input.files){try{const x=await upload(f);results.prepend(card(x))}catch(e){const p=document.createElement('p');p.textContent=f.name+': '+e;results.prepend(p)}}status.textContent='Done'};
+</script>
+</body></html>

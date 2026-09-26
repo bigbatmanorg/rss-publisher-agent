@@ -1,0 +1,13 @@
+services:
+  rss-publisher:
+    build:
+      context: .
+      args:
+        DOCKER_AGENT_VERSION: v1.144.0
+        RSS_PUBLISHER_MCP_REF: v0.1.0
+    env_file: .env
+    ports:
+      - "8080:8080"
+    volumes:
+      - ./data:/data
+    restart: unless-stopped

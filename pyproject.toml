@@ -1,0 +1,25 @@
+[project]
+name = "rss-publisher-agent"
+version = "0.1.0"
+description = "Docker Agent appliance wrapper for bigbatmanorg/rss-publisher-mcp."
+requires-python = ">=3.12"
+license = { text = "MIT" }
+
+dependencies = []
+
+[project.optional-dependencies]
+dev = ["pytest>=9,<10", "pyyaml>=6,<7", "httpx>=0.28,<1", "fastapi>=0.128,<1", "uvicorn>=0.38,<1"]
+
+[build-system]
+requires = ["setuptools>=82"]
+build-backend = "setuptools.build_meta"
+
+# This repository is an appliance, not an importable Python package. Declaring an
+# empty package list stops setuptools flat-layout auto-discovery from failing on
+# the specs/, static/ and supervisor/ directories (which broke `uv run pytest`).
+[tool.setuptools]
+packages = []
+
+[tool.pytest.ini_options]
+testpaths = ["tests"]
+addopts = "-q"
